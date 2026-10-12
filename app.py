@@ -35,19 +35,36 @@ model = saved["model"]
 encoders = saved["encoders"]
 columns = saved["columns"]
 
+
 @st.cache_data(ttl=600)
 def load_data():
+    account = st.secrets.get("SNOWFLAKE_ACCOUNT", os.getenv("SNOWFLAKE_ACCOUNT"))
+    user = st.secrets.get("SNOWFLAKE_USER", os.getenv("SNOWFLAKE_USER"))
+    password = st.secrets.get("SNOWFLAKE_PASSWORD", os.getenv("SNOWFLAKE_PASSWORD"))
+    warehouse = st.secrets.get("SNOWFLAKE_WAREHOUSE", os.getenv("SNOWFLAKE_WAREHOUSE"))
+    database = st.secrets.get("SNOWFLAKE_DATABASE", os.getenv("SNOWFLAKE_DATABASE"))
+    schema = st.secrets.get("SNOWFLAKE_SCHEMA", os.getenv("SNOWFLAKE_SCHEMA"))
+
+    if not all([account, user, password, warehouse, database, schema]):
+        st.error("Snowflake configuration missing. Check Streamlit Cloud Secrets.")
+        st.stop()
+
     conn = snowflake.connector.connect(
-        user=os.getenv("SNOWFLAKE_USER"),
-        password=os.getenv("SNOWFLAKE_PASSWORD"),
-        account=os.getenv("SNOWFLAKE_ACCOUNT"),
-        warehouse=os.getenv("SNOWFLAKE_WAREHOUSE"),
-        database=os.getenv("SNOWFLAKE_DATABASE"),
-        schema=os.getenv("SNOWFLAKE_SCHEMA"),
+        account=account,
+        user=user,
+        password=password,
+        warehouse=warehouse,
+        database=database,
+        schema=schema,
     )
-    df = pd.read_sql("SELECT * FROM hr_attrition_final;", conn)
-    conn.close()
+
+    try:
+        df = pd.read_sql("SELECT * FROM HR_ATTRITION_FINAL;", conn)
+    finally:
+        conn.close()
+
     return df
+
 
 df = load_data()
 
